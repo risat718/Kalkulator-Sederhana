@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kalkulator Interaktif Mobile</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation; /* Optimasi touch untuk layar HP */
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Effect Tombol Saat Ditekan (Tap Effect / Haptic Visual) */
+        .btn-tap {
+            transition: transform 0.08s ease, filter 0.08s ease, box-shadow 0.08s ease;
+            user-select: none;
+        }
+
+        .btn-tap:active {
+            transform: scale(0.92);
+            filter: brightness(1.25);
+        }
+
+        /* Custom Scrollbar untuk layar riwayat kalkulasi */
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 4px;
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        /* Glassmorphism Effect Card */
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-3 sm:p-6 overflow-x-hidden">
+
+    <!-- Container Utama (Skala Mobile / Responsive Card) -->
+    <div class="w-full max-w-sm glass-card rounded-3xl p-5 shadow-2xl flex flex-col justify-between border border-slate-800 relative">
+        
+        <!-- Header & Riwayat Sinkron -->
+        <div class="flex justify-between items-center mb-2 px-1">
+            <span class="text-xs font-semibold tracking-wider text-slate-400 uppercase flex items-center gap-1.5">
+                <i class="fa-solid font-bold fa-calculator text-indigo-400"></i> Kalkulator
+            </span>
+            <button id="history-toggle" class="text-xs text-slate-400 hover:text-indigo-400 transition flex items-center gap-1 py-1 px-2.5 rounded-full bg-slate-800/60 active:scale-95">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <span>Riwayat</span>
+            </button>
+        </div>
+
+        <!-- Panel Riwayat Kalkulasi (Hidden by Default) -->
+        <div id="history-panel" class="hidden absolute inset-x-0 top-0 bottom-0 bg-slate-900/95 backdrop-blur-md rounded-3xl p-5 z-20 flex flex-col justify-between border border-slate-700">
+            <div>
+                <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-800">
+                    <h3 class="font-semibold text-slate-200 text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-clock-rotate-left text-indigo-400"></i> Riwayat Hitungan
+                    </h3>
+                    <button id="close-history" class="text-slate-400 hover:text-white p-1">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+                <div id="history-list" class="space-y-3 max-h-[380px] overflow-y-auto custom-scrollbar pr-1">
+                    <p class="text-xs text-slate-500 text-center py-8">Belum ada riwayat kalkulasi.</p>
+                </div>
+            </div>
+            <button id="clear-history" class="w-full py-2.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 font-medium text-xs rounded-xl border border-red-500/30 transition active:scale-95">
+                Hapus Riwayat
+            </button>
+        </div>
+
+        <!-- Tampilan Layar / Screen Output -->
+        <div class="my-4 bg-slate-900/90 border border-slate-800/80 rounded-2xl p-4 flex flex-col justify-end items-end h-32 overflow-hidden shadow-inner">
+            <!-- Ekpresi Matematika Mini -->
+            <div id="expression" class="text-slate-400 text-sm h-6 overflow-x-auto w-full text-right custom-scrollbar whitespace-nowrap tracking-wide font-light">
+                <!-- Contoh: 125 × 4 -->
+            </div>
+            <!-- Hasil / Angka Utama -->
+            <div id="display" class="text-3xl sm:text-4xl font-bold text-white tracking-tight overflow-x-auto w-full text-right custom-scrollbar whitespace-nowrap py-1">
+                0
+            </div>
+        </div>
+
+        <!-- Grid Tombol Kalkulator (Dirancang Responsif & Mudah Ditap) -->
+        <div class="grid grid-cols-4 gap-2.5 sm:gap-3">
+            
+            <!-- Baris 1 -->
+            <button data-action="clear-all" class="btn-tap bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 font-semibold p-4 rounded-2xl text-lg flex items-center justify-center shadow-md">
+                AC
+            </button>
+            <button data-action="delete" class="btn-tap bg-slate-800 text-slate-300 hover:bg-slate-700 font-semibold p-4 rounded-2xl text-lg flex items-center justify-center shadow-md">
+                <i class="fa-solid fa-backspace"></i>
+            </button>
+            <button data-action="percent" class="btn-tap bg-slate-800 text-indigo-300 hover:bg-slate-700 font-semibold p-4 rounded-2xl text-lg flex items-center justify-center shadow-md">
+                %
+            </button>
+            <button data-action="operator" data-value="/" class="btn-tap bg-indigo-600 text-white hover:bg-indigo-500 font-semibold p-4 rounded-2xl text-xl flex items-center justify-center shadow-lg shadow-indigo-600/30">
+                ÷
+            </button>
+
+            <!-- Baris 2 -->
+            <button data-action="number" data-value="7" class="btn-tap bg-slate-800/90 text-slate-100 hover:bg-slate-700 font-medium p-4 rounded-2xl text-xl flex items-center justify-center shadow-md">
+                7
+            </button>
+            <button data-action="number" data-value="8" class="btn-tap bg-slate-800/90 text-slate-100 hover:bg-slate-700 font-medium p-4 rounded-2xl text-xl flex items-center justify-center shadow-md">
+                8
+            </button>
+            <button data-action="number" data-value="9" class="btn-tap bg-slate-800/90 text-slate-100 hover:bg-slate-700 font-medium p-4 rounded-2xl text-xl flex items-center justify-center shadow-md">
+                9
+            </button>
+            <button data-action="operator" data-value="*" class="btn-tap bg-indigo-600 text-white hover:bg-indigo-500 font-semibold p-4 rounded-2xl text-xl flex items-center justify-center shadow-lg shadow-indigo-600/30">
+                ×
+            </button>
+
+            <!-- Baris 3 -->
+            <button data-action="number" data-value="4" class="btn-tap bg-slate-800/90 text-slate-100 hover:bg-slate-700 font-medium p-4 rounded-2xl text-xl flex items-center justify-center shadow-md">
+                4
+            </button>
+            <button data-action="number" data-value="5" class="btn-tap bg-slate-800/90 text-slate-100 hover:bg-slate-700 font-medium p-4 rounded-2xl text-xl flex items-center justify-center shadow-md">
+                5
+            </button>
+            <button data-action="number" data-value="6" class="btn-tap bg-slate-800/90 text-slate-100 hover:bg-slate-700 font-medium p-4 rounded-2xl text-xl flex items-center justify-center shadow-md">
+                6
+            </button>
+            <button data-action="operator" data-value="-" class="btn-tap bg-indigo-600 text-white hover:bg-indigo-500 font-semibold p-4 rounded-2xl text-xl flex items-center justify-center shadow-lg shadow-indigo-600/30">
+                −
+            </button>
+
+            <!-- Baris 4 -->
+            <button data-action="number" data-value="1" class="btn-tap bg-slate-800/90 text-slate-100 hover:bg-slate-700 font-medium p-4 rounded-2xl text-xl flex items-center justify-center shadow-md">
+                1
+            </button>
+            <button data-action="number" data-value="2" class="btn-tap bg-slate-800/90 text-slate-100 hover:bg-slate-700 font-medium p-4 rounded-2xl text-xl flex items-center justify-center shadow-md">
+                2
+            </button>
+            <button data-action="number" data-value="3" class="btn-tap bg-slate-800/90 text-slate-100 hover:bg-slate-700 font-medium p-4 rounded-2xl text-xl flex items-center justify-center shadow-md">
+                3
+            </button>
+            <button data-action="operator" data-value="+" class="btn-tap bg-indigo-600 text-white hover:bg-indigo-500 font-semibold p-4 rounded-2xl text-xl flex items-center justify-center shadow-lg shadow-indigo-600/30">
+                +
+            </button>
+
+            <!-- Baris 5 -->
+            <button data-action="number" data-value="0" class="btn-tap col-span-2 bg-slate-800/90 text-slate-100 hover:bg-slate-700 font-medium p-4 rounded-2xl text-xl flex items-center justify-center shadow-md">
+                0
+            </button>
+            <button data-action="decimal" class="btn-tap bg-slate-800/90 text-slate-100 hover:bg-slate-700 font-semibold p-4 rounded-2xl text-xl flex items-center justify-center shadow-md">
+                ,
+            </button>
+            <button data-action="calculate" class="btn-tap bg-emerald-500 text-white hover:bg-emerald-400 font-bold p-4 rounded-2xl text-xl flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                =
+            </button>
+        </div>
+    </div>
+
+    <!-- Logika JavaScript Kalkulator -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Element Selector
+            const display = document.getElementById('display');
+            const expressionDisplay = document.getElementById('expression');
+            const historyToggle = document.getElementById('history-toggle');
+            const historyPanel = document.getElementById('history-panel');
+            const closeHistory = document.getElementById('close-history');
+            const historyList = document.getElementById('history-list');
+            const clearHistoryBtn = document.getElementById('clear-history');
+
+            // State kalkulator
+            let currentInput = '0';
+            let previousInput = '';
+            let operator = null;
+            let shouldResetDisplay = false;
+            let calculationHistory = [];
+
+            // Update Tampilan Layar
+            function updateDisplay() {
+                // Formatting angka agar ramah dibaca (pisahkan ribuan menggunakan format lokal)
+                display.textContent = formatNumber(currentInput);
+                
+                if (operator !== null) {
+                    const symbol = getOperatorSymbol(operator);
+                    expressionDisplay.textContent = `${formatNumber(previousInput)} ${symbol}`;
+                } else {
+                    expressionDisplay.textContent = '';
+                }
+            }
+
+            // Simbol Operator untuk Layar
+            function getOperatorSymbol(op) {
+                switch(op) {
+                    case '+': return '+';
+                    case '-': return '−';
+                    case '*': return '×';
+                    case '/': return '÷';
+                    default: return '';
+                }
+            }
+
+            // Format Angka (Lokal Indonesia)
+            function formatNumber(numStr) {
+                if (!numStr || numStr === 'Error') return numStr;
+                const parts = numStr.split('.');
+                const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                return parts.length > 1 ? `${integerPart},${parts[1]}` : integerPart;
+            }
+
+            // Menangani Input Angka
+            function handleNumber(number) {
+                if (currentInput === '0' || shouldResetDisplay) {
+                    currentInput = number;
+                    shouldResetDisplay = false;
+                } else {
+                    // Batasi panjang maksimum karakter agar tidak meluap
+                    if (currentInput.replace('.', '').length < 12) {
+                        currentInput += number;
+                    }
+                }
+                updateDisplay();
+            }
+
+            // Menangani Desimal
+            function handleDecimal() {
+                if (shouldResetDisplay) {
+                    currentInput = '0.';
+                    shouldResetDisplay = false;
+                } else if (!currentInput.includes('.')) {
+                    currentInput += '.';
+                }
+                updateDisplay();
+            }
+
+            // Menangani Operator (+, -, *, /)
+            function handleOperator(nextOperator) {
+                const inputValue = parseFloat(currentInput);
+
+                if (operator && shouldResetDisplay) {
+                    operator = nextOperator;
+                    updateDisplay();
+                    return;
+                }
+
+                if (previousInput === '') {
+                    previousInput = currentInput;
+                } else if (operator) {
+                    const result = calculateResult();
+                    currentInput = String(result);
+                    previousInput = currentInput;
+                    display.textContent = formatNumber(currentInput);
+                }
+
+                shouldResetDisplay = true;
+                operator = nextOperator;
+                updateDisplay();
+            }
+
+            // Kalkulasi Hasil
+            function calculateResult() {
+                const prev = parseFloat(previousInput);
+                const current = parseFloat(currentInput);
+
+                if (isNaN(prev) || isNaN(current)) return current;
+
+                let result = 0;
+                switch (operator) {
+                    case '+':
+                        result = prev + current;
+                        break;
+                    case '-':
+                        result = prev - current;
+                        break;
+                    case '*':
+                        result = prev * current;
+                        break;
+                    case '/':
+                        if (current === 0) {
+                            return 'Error';
+                        }
+                        result = prev / current;
+                        break;
+                    default:
+                        return current;
+                }
+
+                // Hindari masalah presisi float Javascript
+                return Math.round(result * 1e8) / 1e8;
+            }
+
+            // Menangani Tombol Sama Dengan (=)
+            function handleCalculate() {
+                if (operator === null || shouldResetDisplay) return;
+
+                const prev = previousInput;
+                const current = currentInput;
+                const result = calculateResult();
+
+                if (result === 'Error') {
+                    currentInput = 'Error';
+                    expressionDisplay.textContent = `${formatNumber(prev)} ${getOperatorSymbol(operator)} ${formatNumber(current)}`;
+                    display.textContent = 'Tidak bisa bagi 0';
+                    operator = null;
+                    previousInput = '';
+                    shouldResetDisplay = true;
+                    return;
+                }
+
+                const fullExpression = `${formatNumber(prev)} ${getOperatorSymbol(operator)} ${formatNumber(current)}`;
+                currentInput = String(result);
+                
+                // Tambahkan ke Riwayat
+                addHistoryItem(fullExpression, formatNumber(currentInput));
+
+                expressionDisplay.textContent = `${fullExpression} =`;
+                display.textContent = formatNumber(currentInput);
+
+                operator = null;
+                previousInput = '';
+                shouldResetDisplay = true;
+            }
+
+            // Menangani Persentase (%)
+            function handlePercent() {
+                const current = parseFloat(currentInput);
+                if (isNaN(current)) return;
+
+                currentInput = String(current / 100);
+                updateDisplay();
+            }
+
+            // Tombol Backspace / Hapus Satu Karakter
+            function handleDelete() {
+                if (shouldResetDisplay) return;
+                if (currentInput.length === 1 || (currentInput.length === 2 && currentInput.startsWith('-'))) {
+                    currentInput = '0';
+                } else {
+                    currentInput = currentInput.slice(0, -1);
+                }
+                updateDisplay();
+            }
+
+            // Tombol Reset Total (AC)
+            function handleClearAll() {
+                currentInput = '0';
+                previousInput = '';
+                operator = null;
+                shouldResetDisplay = false;
+                updateDisplay();
+            }
+
+            // Logika Riwayat (History)
+            function addHistoryItem(exp, res) {
+                calculationHistory.unshift({ expression: exp, result: res });
+                renderHistory();
+            }
+
+            function renderHistory() {
+                if (calculationHistory.length === 0) {
+                    historyList.innerHTML = '<p class="text-xs text-slate-500 text-center py-8">Belum ada riwayat kalkulasi.</p>';
+                    return;
+                }
+
+                historyList.innerHTML = calculationHistory.map((item, index) => `
+                    <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/50 flex flex-col items-end cursor-pointer hover:bg-slate-800 transition active:scale-98" data-history-index="${index}">
+                        <span class="text-xs text-slate-400">${item.expression}</span>
+                        <span class="text-base font-bold text-emerald-400">= ${item.result}</span>
+                    </div>
+                `).join('');
+
+                // Klik riwayat untuk memuat hasil kembali
+                document.querySelectorAll('[data-history-index]').forEach(el => {
+                    el.addEventListener('click', (e) => {
+                        const idx = el.getAttribute('data-history-index');
+                        const selected = calculationHistory[idx];
+                        if (selected) {
+                            currentInput = selected.result.replace(/\./g, '').replace(',', '.');
+                            updateDisplay();
+                            historyPanel.classList.add('hidden');
+                        }
+                    });
+                });
+            }
+
+            // Event Listeners Tombol Kalkulator (Event Delegation)
+            document.querySelectorAll('button[data-action]').forEach(button => {
+                button.addEventListener('click', () => {
+                    const action = button.getAttribute('data-action');
+                    const value = button.getAttribute('data-value');
+
+                    switch (action) {
+                        case 'number':
+                            handleNumber(value);
+                            break;
+                        case 'decimal':
+                            handleDecimal();
+                            break;
+                        case 'operator':
+                            handleOperator(value);
+                            break;
+                        case 'calculate':
+                            handleCalculate();
+                            break;
+                        case 'percent':
+                            handlePercent();
+                            break;
+                        case 'delete':
+                            handleDelete();
+                            break;
+                        case 'clear-all':
+                            handleClearAll();
+                            break;
+                    }
+                });
+            });
+
+            // Toggle Panel Riwayat
+            historyToggle.addEventListener('click', () => {
+                historyPanel.classList.remove('hidden');
+            });
+
+            closeHistory.addEventListener('click', () => {
+                historyPanel.classList.add('hidden');
+            });
+
+            clearHistoryBtn.addEventListener('click', () => {
+                calculationHistory = [];
+                renderHistory();
+            });
+
+            // Keyboard Support (Kompatibilitas Tambahan untuk Laptop/Desktop)
+            document.addEventListener('keydown', (e) => {
+                if (e.key >= '0' && e.key <= '9') handleNumber(e.key);
+                if (e.key === '.' || e.key === ',') handleDecimal();
+                if (e.key === '+') handleOperator('+');
+                if (e.key === '-') handleOperator('-');
+                if (e.key === '*') handleOperator('*');
+                if (e.key === '/') {
+                    e.preventDefault();
+                    handleOperator('/');
+                }
+                if (e.key === 'Enter' || e.key === '=') {
+                    e.preventDefault();
+                    handleCalculate();
+                }
+                if (e.key === 'Backspace') handleDelete();
+                if (e.key === 'Escape') handleClearAll();
+                if (e.key === '%') handlePercent();
+            });
+        });
+    </script>
+</body>
+</html>
